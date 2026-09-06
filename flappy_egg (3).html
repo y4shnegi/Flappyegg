@@ -1,0 +1,749 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Flappy Egg | Eggoz Cafe</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body {
+    height: 100%;
+    background: #371716;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Arial Black', 'Segoe UI', Arial, sans-serif;
+    overflow: hidden;
+    touch-action: manipulation;
+  }
+  #gameWrap {
+    position: relative;
+    width: 100vw;
+    height: 100vh;
+    max-width: 480px;
+    max-height: 100vh;
+    background: #ffe300;
+    box-shadow: 0 0 40px rgba(0,0,0,0.5);
+    overflow: hidden;
+  }
+  canvas { display: block; width: 100%; height: 100%; }
+
+  .screen {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 22px;
+    background: #f8a807;
+    color: #371716;
+    overflow-y: auto;
+  }
+  .screen.hidden { display: none; }
+  .screen.celebrate {
+    background: linear-gradient(160deg, #ffe300 0%, #f5a81c 55%, #f06d22 100%);
+  }
+
+  #logoWrap { background: #f8a807; margin-bottom: 12px; border-radius: 10px; }
+  #logoImg { display: block; width: min(70vw, 250px); height: auto; }
+
+  .title {
+    font-size: clamp(24px, 7.5vw, 34px);
+    letter-spacing: 0.5px;
+    margin-bottom: 6px;
+    color: #371716;
+    text-transform: uppercase;
+    line-height: 1.15;
+  }
+  .subtitle {
+    font-family: 'Segoe UI', Arial, sans-serif;
+    font-weight: bold;
+    font-size: clamp(15px, 4.4vw, 19px);
+    margin-bottom: 14px;
+    max-width: 340px;
+    line-height: 1.5;
+    color: #4a2517;
+  }
+  .subtitle b { color: #371716; }
+  .rules {
+    font-family: 'Segoe UI', Arial, sans-serif;
+    font-size: clamp(13px, 3.8vw, 16px);
+    line-height: 1.7;
+    margin-bottom: 20px;
+    color: #371716;
+    max-width: 320px;
+  }
+
+  .bigBtn {
+    font-size: clamp(16px, 4.6vw, 20px);
+    padding: 14px 38px;
+    border: none;
+    border-radius: 40px;
+    background: #371716;
+    color: #ffe300;
+    font-weight: bold;
+    cursor: pointer;
+    box-shadow: 0 5px 0 #1c0b0a;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-top: 6px;
+  }
+  .bigBtn:active { transform: translateY(5px); box-shadow: none; }
+  .bigBtn.orange { background: #f06d22; box-shadow: 0 5px 0 #b8511a; }
+
+  #soundToggle {
+    position: absolute; top: 14px; right: 14px;
+    width: 38px; height: 38px; border-radius: 50%;
+    background: rgba(55,23,22,0.55); border: 2px solid #ffe300;
+    color: #ffe300; font-size: 16px;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; z-index: 20; user-select: none;
+  }
+
+  #confettiLayer {
+    position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+    pointer-events: none; overflow: hidden; z-index: 1;
+  }
+  .confetti-piece {
+    position: absolute; top: -20px; width: 8px; height: 14px; opacity: 0.95;
+    animation-name: confettiFall; animation-timing-function: linear; animation-iteration-count: infinite;
+  }
+  @keyframes confettiFall {
+    0% { transform: translateY(-20px) rotate(0deg); }
+    100% { transform: translateY(110vh) rotate(540deg); }
+  }
+
+  .resultBadge {
+    background: #371716;
+    color: #ffe300;
+    font-size: clamp(30px, 10vw, 46px);
+    font-weight: bold;
+    padding: 10px 28px;
+    border-radius: 18px;
+    margin: 10px 0 16px;
+    z-index: 2;
+    position: relative;
+  }
+  .screen.celebrate .resultBadge {
+    background: #371716;
+    color: #ffe300;
+  }
+
+  .claimBox {
+    z-index: 2;
+    position: relative;
+    width: 100%;
+    max-width: 300px;
+    margin-top: 8px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    opacity: 0;
+    transform: translateY(8px);
+    transition: opacity 0.4s ease, transform 0.4s ease;
+  }
+  .claimBox.show { opacity: 1; transform: translateY(0); }
+  .claimBox input {
+    width: 100%;
+    font-size: 16px;
+    padding: 12px 16px;
+    border-radius: 30px;
+    border: 2px solid #371716;
+    background: #fffaf0;
+    color: #371716;
+    text-align: center;
+    font-family: 'Segoe UI', Arial, sans-serif;
+  }
+  .claimBox input::placeholder { color: #a08060; }
+  .claimNote {
+    font-family: 'Segoe UI', Arial, sans-serif;
+    font-size: 12px;
+    color: #4a2517;
+    max-width: 280px;
+  }
+  .errorNote { color: #7a1f1f; font-weight: bold; }
+
+  .codeBox {
+    background: #371716;
+    color: #ffe300;
+    padding: 14px 26px;
+    border-radius: 14px;
+    font-size: clamp(22px, 6.5vw, 30px);
+    letter-spacing: 2px;
+    font-weight: bold;
+    margin: 14px 0;
+  }
+
+  .miniBtnRow { display: flex; gap: 10px; margin-top: 6px; }
+  .smallLink {
+    font-family: 'Segoe UI', Arial, sans-serif;
+    font-size: 13px;
+    color: #4a2517;
+    text-decoration: underline;
+    cursor: pointer;
+    margin-top: 10px;
+    background: none;
+    border: none;
+  }
+
+  .spinner {
+    width: 22px; height: 22px;
+    border: 3px solid rgba(55,23,22,0.25);
+    border-top-color: #371716;
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    margin: 6px auto 0;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+<div id="gameWrap">
+  <canvas id="game"></canvas>
+  <div id="soundToggle">🔊</div>
+
+  <!-- LANDING -->
+  <div id="screenStart" class="screen">
+    <div id="logoWrap"><img id="logoImg" src="data:image/webp;base64,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" alt="Eggoz Cafe"></div>
+    <div class="title">HOW MUCH CAN YOU<br>EGG-CEL?</div>
+    <div class="rules">
+      🥚 Cross a pipe = <b>+1% OFF</b><br>
+      Max discount: <b>30% OFF</b><br>
+      Now flap like your discount depends on it.
+    </div>
+    <button class="bigBtn" id="startBtn">Start Game</button>
+  </div>
+
+  <!-- RESULT (loss or win) -->
+  <div id="screenResult" class="screen hidden">
+    <div id="confettiLayer"></div>
+    <div class="title" id="resultTitle">EGG OVER!</div>
+    <div class="subtitle" id="resultSub">Your eggspertise earned you a discount!</div>
+    <div class="resultBadge" id="resultBadge">0% OFF</div>
+
+    <div class="claimBox" id="claimBox">
+      <input type="tel" id="mobileInput" placeholder="Enter your mobile number" maxlength="15">
+      <button class="bigBtn orange" id="claimBtn">Claim My Discount</button>
+      <div class="claimNote" id="claimNote">One discount can be claimed per mobile number per day.</div>
+      <div id="claimSpinner" class="spinner hidden"></div>
+    </div>
+    <button class="smallLink" id="playAgainFromResult">Play again instead</button>
+  </div>
+
+  <!-- CODE / CLAIMED -->
+  <div id="screenClaimed" class="screen hidden">
+    <div class="title" id="claimedTitle">Here's Your Code!</div>
+    <div class="subtitle" id="claimedSub">Show this at the counter to redeem your discount.</div>
+    <div class="codeBox" id="codeBox">EGGCITE00</div>
+    <button class="bigBtn" id="playAgainFromClaimed">Play Again</button>
+  </div>
+</div>
+
+<script>
+(function () {
+  // ============================================================
+  // CONFIGURATION - set this to your deployed Google Apps Script
+  // Web App URL (see the Code.gs file provided alongside this game).
+  // Until you set a real URL here, the game runs in local DEMO MODE:
+  // it generates a code without any server-side duplicate checking,
+  // so you can test the flow before the backend is wired up.
+  // ============================================================
+  const BACKEND_URL = 'https://script.google.com/macros/s/AKfycbyiOK76Oi9sVjycjcsPGiFwumrXbLaXn65Sv_ugcB0-1ngsU9qhjFGgNB9WxVo9z8l4/exec';
+  const DEMO_MODE = !BACKEND_URL || BACKEND_URL.indexOf('PASTE_YOUR') !== -1;
+
+  const canvas = document.getElementById('game');
+  const ctx = canvas.getContext('2d');
+  const wrap = document.getElementById('gameWrap');
+  const soundToggle = document.getElementById('soundToggle');
+
+  const screenStart = document.getElementById('screenStart');
+  const screenResult = document.getElementById('screenResult');
+  const screenClaimed = document.getElementById('screenClaimed');
+
+  const startBtn = document.getElementById('startBtn');
+  const resultTitle = document.getElementById('resultTitle');
+  const resultSub = document.getElementById('resultSub');
+  const resultBadge = document.getElementById('resultBadge');
+  const claimBox = document.getElementById('claimBox');
+  const mobileInput = document.getElementById('mobileInput');
+  const claimBtn = document.getElementById('claimBtn');
+  const claimNote = document.getElementById('claimNote');
+  const claimSpinner = document.getElementById('claimSpinner');
+  const playAgainFromResult = document.getElementById('playAgainFromResult');
+  const playAgainFromClaimed = document.getElementById('playAgainFromClaimed');
+  const codeBox = document.getElementById('codeBox');
+  const claimedTitle = document.getElementById('claimedTitle');
+  const claimedSub = document.getElementById('claimedSub');
+  const confettiLayer = document.getElementById('confettiLayer');
+
+  const MAX_SCORE = 30;
+
+  const COLORS = {
+    sunshineYellow: '#ffe300',
+    farmBrown: '#371716',
+    yolkOrange: '#f06d22',
+    nutritionYellow: '#f5a81c'
+  };
+  const CONFETTI_COLORS = [COLORS.sunshineYellow, COLORS.yolkOrange, COLORS.farmBrown, '#ffffff', COLORS.nutritionYellow];
+
+  function showScreen(el) {
+    [screenStart, screenResult, screenClaimed].forEach(function (s) { s.classList.add('hidden'); });
+    el.classList.remove('hidden');
+  }
+
+  // ---------- Sound ----------
+  let audioCtx = null;
+  let soundOn = true;
+  function ensureAudio() {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+  }
+  function tone(freq, dur, type, startGain, endGain, delay) {
+    if (!soundOn || !audioCtx) return;
+    const t0 = audioCtx.currentTime + (delay || 0);
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = type || 'sine';
+    osc.frequency.setValueAtTime(freq, t0);
+    gain.gain.setValueAtTime(startGain != null ? startGain : 0.2, t0);
+    gain.gain.exponentialRampToValueAtTime(Math.max(endGain != null ? endGain : 0.001, 0.0001), t0 + dur);
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.start(t0);
+    osc.stop(t0 + dur + 0.02);
+  }
+  function slide(freqStart, freqEnd, dur, type, gainVal, delay) {
+    if (!soundOn || !audioCtx) return;
+    const t0 = audioCtx.currentTime + (delay || 0);
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = type || 'sawtooth';
+    osc.frequency.setValueAtTime(freqStart, t0);
+    osc.frequency.exponentialRampToValueAtTime(Math.max(freqEnd, 30), t0 + dur);
+    gain.gain.setValueAtTime(gainVal, t0);
+    gain.gain.exponentialRampToValueAtTime(0.001, t0 + dur);
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.start(t0);
+    osc.stop(t0 + dur + 0.02);
+  }
+  function playFlap() {
+    ensureAudio();
+    tone(520, 0.08, 'square', 0.13, 0.001, 0);
+  }
+  function playScore() {
+    ensureAudio();
+    tone(880, 0.1, 'sine', 0.16, 0.001, 0);
+    tone(1200, 0.12, 'sine', 0.13, 0.001, 0.06);
+  }
+  // Funny synthesized "chicken cluck" - a couple of quick pitch-bent
+  // squawks, capped under 2 seconds total, plays once on loss.
+  function playChickenCluck() {
+    ensureAudio();
+    slide(700, 260, 0.16, 'sawtooth', 0.16, 0);
+    slide(650, 220, 0.14, 'sawtooth', 0.14, 0.17);
+    slide(900, 300, 0.22, 'square', 0.15, 0.34);
+    tone(180, 0.1, 'square', 0.1, 0.001, 0.58);
+  }
+  function playWin() {
+    ensureAudio();
+    [523, 659, 784, 1046, 1318].forEach(function (f, i) {
+      tone(f, 0.24, 'triangle', 0.19, 0.001, i * 0.1);
+    });
+  }
+  soundToggle.addEventListener('click', function (e) {
+    e.stopPropagation();
+    soundOn = !soundOn;
+    soundToggle.textContent = soundOn ? '🔊' : '🔇';
+    if (soundOn) ensureAudio();
+  });
+
+  // ---------- Confetti ----------
+  function launchConfetti() {
+    confettiLayer.innerHTML = '';
+    for (let i = 0; i < 60; i++) {
+      const piece = document.createElement('div');
+      piece.className = 'confetti-piece';
+      piece.style.background = CONFETTI_COLORS[Math.floor(Math.random() * CONFETTI_COLORS.length)];
+      piece.style.left = Math.random() * 100 + '%';
+      piece.style.width = (5 + Math.random() * 6) + 'px';
+      piece.style.height = (10 + Math.random() * 8) + 'px';
+      piece.style.animationDuration = (2.2 + Math.random() * 2.2) + 's';
+      piece.style.animationDelay = (Math.random() * 2.5) + 's';
+      piece.style.borderRadius = Math.random() > 0.5 ? '50%' : '2px';
+      confettiLayer.appendChild(piece);
+    }
+  }
+  function stopConfetti() { confettiLayer.innerHTML = ''; }
+
+  // ---------- Canvas sizing ----------
+  let dpr, W, H;
+  function resize() {
+    dpr = window.devicePixelRatio || 1;
+    W = wrap.clientWidth;
+    H = wrap.clientHeight;
+    canvas.width = W * dpr;
+    canvas.height = H * dpr;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+  window.addEventListener('resize', resize);
+  resize();
+
+  // ---------- Game state ----------
+  let egg, pipes, score, gravity, flapForce;
+  let frame, running, won, gameOver, started;
+
+  function baseScale() { return H / 800; }
+
+  // Difficulty ramps up in three steps as score increases, so getting to
+  // 10-20 feels earned but not brutal, and 30 feels like a real achievement.
+  function tier() {
+    if (score < 10) return 0;
+    if (score < 20) return 1;
+    return 2;
+  }
+  function currentPipeSpeed() {
+    const s = baseScale();
+    return [145, 175, 205][tier()] * s;
+  }
+  function currentPipeGap() {
+    const s = baseScale();
+    return [225, 190, 165][tier()] * s;
+  }
+  function currentSpacing() {
+    const s = baseScale();
+    return [270, 245, 225][tier()] * s;
+  }
+
+  function resetGame() {
+    const s = baseScale();
+    egg = { x: W * 0.28, y: H / 2, r: 16 * s, vy: 0, wobble: 0 };
+    gravity = 1500 * s;
+    flapForce = -410 * s;
+    pipes = [];
+    score = 0;
+    frame = 0;
+    running = false;
+    won = false;
+    gameOver = false;
+    started = false;
+    spawnPipe(W + 100);
+  }
+
+  function spawnPipe(xPos) {
+    const s = baseScale();
+    const gap = currentPipeGap();
+    const margin = 70 * s;
+    const minY = margin + gap / 2;
+    const maxY = H - margin - gap / 2;
+    const centerY = Math.random() * (maxY - minY) + minY;
+    pipes.push({ x: xPos, centerY: centerY, gap: gap, passed: false });
+  }
+
+  function flap() {
+    if (gameOver) return;
+    ensureAudio();
+    if (!started) { started = true; running = true; }
+    egg.vy = flapForce;
+    egg.wobble = 1;
+    playFlap();
+  }
+
+  let lastTime = null;
+  function loop(ts) {
+    if (lastTime === null) lastTime = ts;
+    let dt = (ts - lastTime) / 1000;
+    dt = Math.min(dt, 1 / 30);
+    lastTime = ts;
+    update(dt);
+    draw();
+    requestAnimationFrame(loop);
+  }
+
+  const PIPE_WIDTH_BASE = 60;
+  function pipeWidthNow() { return PIPE_WIDTH_BASE * baseScale(); }
+
+  function update(dt) {
+    if (!running) return;
+
+    egg.vy += gravity * dt;
+    egg.y += egg.vy * dt;
+    if (egg.wobble > 0) egg.wobble -= dt * 3;
+
+    const speed = currentPipeSpeed();
+    const pw = pipeWidthNow();
+    for (let p of pipes) p.x -= speed * dt;
+    if (pipes.length && pipes[0].x < -pw) pipes.shift();
+
+    const lastPipe = pipes[pipes.length - 1];
+    const spacing = currentSpacing();
+    if (lastPipe && (W - lastPipe.x) > spacing) spawnPipe(W + 20);
+
+    for (let p of pipes) {
+      if (!p.passed && p.x + pw < egg.x) {
+        p.passed = true;
+        score = Math.min(score + 1, MAX_SCORE); // never exceed 30, even on a stray frame
+        playScore();
+        if (score >= MAX_SCORE) { won = true; endGame(); return; }
+      }
+    }
+
+    if (egg.y - egg.r < 0 || egg.y + egg.r > H) { endGame(); return; }
+    for (let p of pipes) {
+      const gapTop = p.centerY - p.gap / 2;
+      const gapBottom = p.centerY + p.gap / 2;
+      const withinX = egg.x + egg.r > p.x && egg.x - egg.r < p.x + pw;
+      if (withinX && (egg.y - egg.r < gapTop || egg.y + egg.r > gapBottom)) { endGame(); return; }
+    }
+  }
+
+  function endGame() {
+    running = false;
+    gameOver = true;
+    if (won) playWin(); else playChickenCluck();
+    showResultScreen();
+  }
+
+  // ---------- Result screen (loss or win) ----------
+  function showResultScreen() {
+    resultBadge.textContent = score + '% OFF';
+    claimBox.classList.remove('show');
+    mobileInput.value = '';
+    claimNote.classList.remove('errorNote');
+    claimNote.textContent = 'One discount can be claimed per mobile number per day.';
+    claimBtn.disabled = false;
+    claimBtn.textContent = 'Claim My Discount';
+
+    if (won) {
+      screenResult.classList.add('celebrate');
+      resultTitle.textContent = '\uD83E\uDD5A\uD83D\uDD25 YOU CRACKED IT!';
+      resultSub.innerHTML = '<b>30% OFF!</b> You officially reached the maximum discount!';
+      launchConfetti();
+    } else {
+      screenResult.classList.remove('celebrate');
+      resultTitle.textContent = 'EGG OVER! \uD83E\uDD5A';
+      resultSub.innerHTML = 'Your eggspertise earned you <b>' + score + '% OFF</b>!';
+      stopConfetti();
+    }
+    showScreen(screenResult);
+
+    // let the celebration/loss beat land for a moment before the claim
+    // form appears - immediate for a loss, a short beat for the big win
+    const delay = won ? 1400 : 300;
+    setTimeout(function () { claimBox.classList.add('show'); }, delay);
+  }
+
+  // ---------- Claim flow ----------
+  function validMobile(v) {
+    const digits = v.replace(/\D/g, '');
+    return digits.length >= 10 && digits.length <= 13;
+  }
+
+  claimBtn.addEventListener('click', function () {
+    const mobile = mobileInput.value.trim();
+    if (!validMobile(mobile)) {
+      claimNote.textContent = 'Please enter a valid mobile number.';
+      claimNote.classList.add('errorNote');
+      return;
+    }
+    claimNote.classList.remove('errorNote');
+    claimNote.textContent = 'One discount can be claimed per mobile number per day.';
+    claimBtn.disabled = true;
+    claimBtn.textContent = 'Submitting...';
+    claimSpinner.classList.remove('hidden');
+
+    submitClaim(mobile, score).then(function (res) {
+      claimSpinner.classList.add('hidden');
+      claimBtn.disabled = false;
+      claimBtn.textContent = 'Claim My Discount';
+      if (res.error) {
+        claimNote.textContent = res.error;
+        claimNote.classList.add('errorNote');
+        return;
+      }
+      if (res.alreadyClaimed) {
+        claimedTitle.textContent = "You've Already Claimed Today";
+        claimedSub.textContent = 'Come back tomorrow and flap for another one!';
+        codeBox.style.display = 'none';
+      } else {
+        claimedTitle.textContent = 'Here\u2019s Your Code!';
+        claimedSub.textContent = 'Show this at the counter to redeem your discount.';
+        codeBox.style.display = 'block';
+        codeBox.textContent = res.code;
+      }
+      showScreen(screenClaimed);
+    });
+  });
+
+  // Talks to the Google Apps Script backend (Code.gs). In DEMO_MODE
+  // (no backend URL configured yet) it fakes a response locally so the
+  // flow can be tested end-to-end before the backend is deployed -
+  // NOTE: demo mode does not enforce the one-per-day rule or protect
+  // against a manipulated score; only the real backend does that.
+  function submitClaim(mobile, discount) {
+    if (DEMO_MODE) {
+      return new Promise(function (resolve) {
+        setTimeout(function () {
+          const code = 'EGGCITE' + String(discount).padStart(2, '0');
+          resolve({ code: code, alreadyClaimed: false, demo: true });
+        }, 500);
+      });
+    }
+    return fetch(BACKEND_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' }, // avoids a CORS preflight against Apps Script
+      body: JSON.stringify({ mobile: mobile, score: discount })
+    }).then(function (r) { return r.json(); })
+      .catch(function () {
+        return { error: 'Could not reach the server. Please try again.' };
+      });
+  }
+
+  playAgainFromResult.addEventListener('click', backToStart);
+  playAgainFromClaimed.addEventListener('click', backToStart);
+  function backToStart() {
+    stopConfetti();
+    screenResult.classList.remove('celebrate');
+    showScreen(screenStart);
+  }
+
+  // ---------- Drawing ----------
+  function draw() {
+    const grad = ctx.createLinearGradient(0, 0, 0, H);
+    grad.addColorStop(0, COLORS.sunshineYellow);
+    grad.addColorStop(1, COLORS.nutritionYellow);
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, W, H);
+
+    ctx.fillStyle = 'rgba(255,255,255,0.18)';
+    const dotSpace = 46 * baseScale();
+    for (let y = (frame * 0.15) % dotSpace; y < H; y += dotSpace) {
+      for (let x = 0; x < W; x += dotSpace) {
+        ctx.beginPath(); ctx.arc(x, y, 3, 0, Math.PI * 2); ctx.fill();
+      }
+    }
+
+    const pw = pipeWidthNow();
+    for (let p of pipes) drawPanPipe(p, pw);
+
+    ctx.fillStyle = COLORS.farmBrown;
+    ctx.fillRect(0, H - 8, W, 8);
+
+    drawEgg(egg.x, egg.y, egg.r, egg.vy, egg.wobble);
+
+    const s = baseScale();
+    const badgeW = 92 * s, badgeH = 46 * s;
+    const bx = W / 2 - badgeW / 2, by = 14 * s;
+    ctx.fillStyle = COLORS.farmBrown;
+    roundRect(ctx, bx, by, badgeW, badgeH, 14 * s);
+    ctx.fill();
+    ctx.fillStyle = COLORS.sunshineYellow;
+    ctx.font = 'bold ' + Math.round(26 * s) + 'px Arial';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(score, W / 2, by + badgeH / 2 + 1);
+
+    frame++;
+  }
+
+  function roundRect(c, x, y, w, h, r) {
+    c.beginPath();
+    c.moveTo(x + r, y);
+    c.arcTo(x + w, y, x + w, y + h, r);
+    c.arcTo(x + w, y + h, x, y + h, r);
+    c.arcTo(x, y + h, x, y, r);
+    c.arcTo(x, y, x + w, y, r);
+    c.closePath();
+  }
+
+  function drawPanPipe(p, pw) {
+    const s = baseScale();
+    const gapTop = p.centerY - p.gap / 2;
+    const gapBottom = p.centerY + p.gap / 2;
+
+    ctx.fillStyle = COLORS.farmBrown;
+    roundRect(ctx, p.x, 0, pw, gapTop, 6 * s); ctx.fill();
+    ctx.fillStyle = COLORS.yolkOrange;
+    ctx.fillRect(p.x - 6 * s, gapTop - 12 * s, pw + 12 * s, 12 * s);
+    ctx.fillStyle = COLORS.farmBrown;
+    ctx.fillRect(p.x + pw / 2 - 4 * s, 0, 8 * s, Math.max(gapTop - 12 * s, 0));
+
+    ctx.fillStyle = COLORS.farmBrown;
+    roundRect(ctx, p.x, gapBottom, pw, H - gapBottom, 6 * s); ctx.fill();
+    ctx.fillStyle = COLORS.yolkOrange;
+    ctx.fillRect(p.x - 6 * s, gapBottom, pw + 12 * s, 12 * s);
+    ctx.fillStyle = COLORS.farmBrown;
+    ctx.fillRect(p.x + pw / 2 - 4 * s, gapBottom + 12 * s, 8 * s, Math.max(H - gapBottom - 12 * s, 0));
+  }
+
+  function drawEgg(x, y, r, vy, wobble) {
+    const angle = Math.max(-0.5, Math.min(0.9, vy / 800));
+    const squash = 1 + Math.sin(Math.max(wobble, 0) * Math.PI) * 0.12;
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(angle);
+    ctx.scale(1 / squash, squash);
+
+    ctx.beginPath();
+    ctx.moveTo(0, -r * 1.3);
+    ctx.bezierCurveTo(r * 1.15, -r * 1.3, r * 1.15, r * 1.1, 0, r * 1.3);
+    ctx.bezierCurveTo(-r * 1.15, r * 1.1, -r * 1.15, -r * 1.3, 0, -r * 1.3);
+    ctx.closePath();
+    ctx.fillStyle = '#fffaf0';
+    ctx.fill();
+    ctx.strokeStyle = COLORS.nutritionYellow;
+    ctx.lineWidth = 2.5;
+    ctx.stroke();
+
+    ctx.fillStyle = COLORS.farmBrown;
+    ctx.beginPath(); ctx.arc(r * 0.35, -r * 0.1, r * 0.13, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(r * 0.2, r * 0.35);
+    ctx.quadraticCurveTo(r * 0.5, r * 0.55, r * 0.75, r * 0.28);
+    ctx.strokeStyle = COLORS.farmBrown;
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    ctx.fillStyle = 'rgba(240,109,34,0.35)';
+    ctx.beginPath(); ctx.arc(-r * 0.1, r * 0.15, r * 0.22, 0, Math.PI * 2); ctx.fill();
+
+    ctx.restore();
+  }
+
+  // ---------- Input ----------
+  function handleInput(e) {
+    e.preventDefault();
+    if (!screenStart.classList.contains('hidden')) return;
+    if (!screenResult.classList.contains('hidden')) return;
+    if (!screenClaimed.classList.contains('hidden')) return;
+    flap();
+  }
+  canvas.addEventListener('mousedown', handleInput);
+  canvas.addEventListener('touchstart', handleInput, { passive: false });
+  window.addEventListener('keydown', function (e) {
+    if (e.code === 'Space') {
+      e.preventDefault();
+      if (!screenStart.classList.contains('hidden')) return;
+      if (!screenResult.classList.contains('hidden')) return;
+      if (!screenClaimed.classList.contains('hidden')) return;
+      flap();
+    }
+  });
+
+  startBtn.addEventListener('click', function () {
+    ensureAudio();
+    resize();
+    resetGame();
+    [screenStart, screenResult, screenClaimed].forEach(function (s) { s.classList.add('hidden'); });
+  });
+
+  // init
+  resetGame();
+  showScreen(screenStart);
+  requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>
